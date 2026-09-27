@@ -1,0 +1,22 @@
+{
+  "name": "clover-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup:dry": "node --env-file=.env scripts/setup-server.js",
+    "setup:apply": "node --env-file=.env scripts/setup-server.js --apply",
+    "start": "node --env-file=.env src/index.js",
+    "lint": "eslint src scripts",
+    "test": "node --test \"test/**/*.test.js\"",
+    "check": "npm run lint && npm test",
+    "import:intros": "node --env-file=.env scripts/import-intros.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "globals": "^17.12.0"
+  }
+}
