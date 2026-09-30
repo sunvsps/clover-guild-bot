@@ -3,10 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.9"
+  },
   "scripts": {
     "setup:dry": "node --env-file=.env scripts/setup-server.js",
     "setup:apply": "node --env-file=.env scripts/setup-server.js --apply",
-    "start": "node --env-file=.env src/index.js",
+    "start": "node --env-file-if-exists=.env src/index.js",
     "lint": "eslint src scripts",
     "test": "node --test \"test/**/*.test.js\"",
     "check": "npm run lint && npm test",

@@ -7,7 +7,8 @@ export const CHANNELS = {
   guildRulesPost: 'กฎการอยู่ร่วมกัน', // ชื่อโพสต์ใน forum
   auctionRules: 'กฎการประมูล',
   lounge: 'แชทห้องนั่งเล่น',
-  staffLog: 'staff-log', // ห้องทีมดูแล รับคำขออนุมัติ
+  staffLog: 'staff-log',
+  changeForum: 'เปลี่ยนชื่อ-เปลี่ยนอาชีพ',
 };
 
 export const CATEGORIES = {

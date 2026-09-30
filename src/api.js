@@ -59,6 +59,9 @@ export async function getJobs() {
 export const registerMember = (discordId, { ign, jobId, nickname }) =>
   request(`/api/v1/bot/members/${discordId}`, { method: 'PUT', body: { ign, jobId, nickname } });
 
+export const updateMember = (discordId, patch) =>
+  request(`/api/v1/bot/members/${discordId}`, { method: 'PATCH', body: patch });
+
 export const deactivateMember = (discordId) =>
   request(`/api/v1/bot/members/${discordId}/deactivate`, { method: 'POST' });
 

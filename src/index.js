@@ -10,8 +10,9 @@ import {
   TextInputStyle,
 } from 'discord.js';
 import { apiErrorMessage, getJobs, registerMember } from './api.js';
+import { CHANGE_PANELS, findChangeThreads, handleChangeInteraction } from './memberChange.js';
 import { CHANNELS, COLOR, GUILD_NAME, ROLES } from './config.js';
-import { channelLink } from './links.js';
+import { channelLink, linkButton } from './links.js';
 import { intents, wantsMessageContent } from './intents.js';
 import { findChannel } from './lookup.js';
 import {
@@ -37,6 +38,7 @@ import {
   guildRulesPanel,
   introPanel,
   joinPanel,
+  movePanelToBottom,
   partyPanel,
   postPanel,
 } from './panels.js';
@@ -110,6 +112,7 @@ client.on('interactionCreate', async (i) => {
   try {
     if (i.isChatInputCommand() && i.commandName === 'โพสต์ปุ่ม') return await postPanels(i);
     if (i.isChatInputCommand() && i.commandName === 'รออนุมัติ') return await listPending(i);
+    if (await handleChangeInteraction(i)) return;
     if (i.isStringSelectMenu() && i.customId === 'intro-job')
       return await once(i.user.id, i, () => selectJob(i));
     if (i.isButton()) return await onButton(i);
@@ -155,12 +158,24 @@ async function postPanels(i) {
   let removed = 0;
   removed += await postPanel(welcome, 'join-request', joinPanel(), { pin: true });
   removed += await postPanel(intro, 'intro', introPanel(), { silent: true });
-  removed += await postPanel(party, 'party', partyPanel());
+  removed += await postPanel(party, 'party', partyPanel(), { silent: true });
   removed += await postPanel(guildRulesPost, 'rules-guild', guildRulesPanel(), { pin: true });
   removed += await postPanel(auctionRules, 'rules-auction', auctionRulesPanel());
+
+  // โพสต์ปุ่มในกระทู้เปลี่ยนชื่อ/เปลี่ยนอาชีพ (ถ้ามี)
+  const { forum: changeForum, jobThread, nameThread } = await findChangeThreads(g);
+  for (const [thread, panel] of [
+    [jobThread, CHANGE_PANELS.job],
+    [nameThread, CHANGE_PANELS.name],
+  ]) {
+    if (thread) removed += await postPanel(thread, panel.customId, panel.payload(), { silent: true });
+  }
+
+  const changeNote = changeForum ? '' : `\n⚠️ ไม่เจอ forum "${CHANNELS.changeForum}" (ข้ามไป)`;
   await i.editReply(
-    `✅ โพสต์ปุ่มครบทั้ง 5 จุดแล้ว (ขอเข้ากิล, แนะนำตัว, แจ้งตี้, กฎกิล, กฎการประมูล)` +
-      (removed ? `\n🧹 ลบปุ่มเก่าที่ซ้ำออก ${removed} อัน` : ''),
+    `✅ โพสต์ปุ่มครบแล้ว (ขอเข้ากิล, แนะนำตัว, แจ้งตี้, กฎกิล, กฎการประมูล, เปลี่ยนชื่อ/อาชีพ)` +
+      (removed ? `\n🧹 ลบปุ่มเก่าที่ซ้ำออก ${removed} อัน` : '') +
+      changeNote,
   );
 }
 
@@ -185,9 +200,9 @@ const stamp = (embed, text, color) =>
       text: `${text} • ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`,
     });
 
-/** คนที่ผ่านด่านแนะนำตัวไปแล้ว ยังกดแก้ข้อมูลเดิมได้ */
+/** แนะนำตัวได้ครั้งเดียว แก้ข้อมูลทีหลังต้องไปที่กระทู้เปลี่ยนชื่อ-เปลี่ยนอาชีพ */
 const isPastIntro = (member) =>
-  [ROLES.introduced, ROLES.acceptedGuild].some((r) => hasRole(member, r));
+  [ROLES.introduced, ROLES.acceptedGuild, ROLES.member].some((r) => hasRole(member, r));
 
 async function onButton(i) {
   const { guild, member } = await guildContext(i);
@@ -268,7 +283,19 @@ async function onButton(i) {
 
   // ── ด่าน 2: แนะนำตัว ──
   if (i.customId === 'intro') {
-    if (!hasRole(member, ROLES.approved) && !hasRole(member, ROLES.member) && !isPastIntro(member)) {
+    if (isPastIntro(member)) {
+      const { jobThread, nameThread } = await findChangeThreads(guild);
+      const links = [
+        jobThread && linkButton('เปลี่ยนอาชีพ', jobThread.url),
+        nameThread && linkButton('เปลี่ยนชื่อ', nameThread.url),
+      ].filter(Boolean);
+      return i.reply({
+        content: 'คุณแนะนำตัวไปแล้ว ถ้าจะเปลี่ยนชื่อหรืออาชีพ ไปที่กระทู้ด้านล่าง',
+        components: links.length ? [{ type: 1, components: links }] : [],
+        ...eph,
+      });
+    }
+    if (!hasRole(member, ROLES.approved)) {
       return i.reply({ content: 'ต้องได้รับอนุมัติจากทีมดูแลกิลด์ก่อนนะ', ...eph });
     }
     return i.showModal(await introModal(i.user.id));
@@ -437,6 +464,9 @@ async function onModal(i) {
         avatarURL: i.member.displayAvatarURL(),
         allowedMentions: { parse: [] },
       });
+      await movePanelToBottom(i.channel, 'party', partyPanel(), { silent: true }).catch((err) =>
+        console.error('ย้ายปุ่มแจ้งตี้ลงล่างไม่ได้:', err.message),
+      );
       return i.editReply('✅ แจ้งตี้ประจำเรียบร้อย');
     }
     await hook.editMessage(messageId, { content, components, allowedMentions: { parse: [] } });

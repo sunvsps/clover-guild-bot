@@ -16,9 +16,8 @@ export function channelLink(channel, fallback = '#แนะนำตัว') {
  * ปุ่มแบบลิงก์ไม่มี customId (กดแล้วเปิดหน้านั้นเลย ไม่ได้ยิงกลับมาหาบอท)
  * จำเป็นเพราะป้าย "แนะนำตัว" ถูกย้ายมาอยู่ล่างสุดเสมอ คนที่ไม่อ่านข้อความจะกดแนะนำตัวซ้ำแทนที่จะไปต่อ
  */
+export const linkButton = (label, url) => ({ type: 2, style: 5, label, url });
+
 export function linkButtonRow(label, url) {
-  return {
-    type: 1,
-    components: [{ type: 2, style: 5, label, url }],
-  };
+  return { type: 1, components: [linkButton(label, url)] };
 }
