@@ -3,8 +3,8 @@ import { test } from 'node:test';
 import { NICKNAME_MAX } from '../src/config.js';
 import { formatNickname } from '../src/onboarding.js';
 
-test('ชื่อปกติได้รูปแบบ IGN/อาชีพ(ชื่อเล่น)', () => {
-  assert.equal(formatNickname({ ign: 'Mimayuu', job: 'Knight', nickname: 'Mint' }), 'Mimayuu/Knight(Mint)');
+test('ชื่อปกติได้รูปแบบ IGN/อาชีพ (ชื่อเล่น)', () => {
+  assert.equal(formatNickname({ ign: 'Mimayuu', job: 'Knight', nickname: 'Mint' }), 'Mimayuu/Knight (Mint)');
 });
 
 test('ไม่มีชื่อเล่น ก็ไม่มีวงเล็บ', () => {
@@ -12,8 +12,8 @@ test('ไม่มีชื่อเล่น ก็ไม่มีวงเล�
 });
 
 test('ชื่อไทยและอักขระพิเศษจากชีทกิลด์ใช้ได้', () => {
-  const name = formatNickname({ ign: 'เสีEวค่ะXลวงMา', job: 'Blacksmith', nickname: 'ปอนด์' });
-  assert.equal(name, 'เสีEวค่ะXลวงMา/Blacksmith(ปอนด์)');
+  const name = formatNickname({ ign: 'เสีEวค่ะXลวงMา', job: 'Blacksmith', nickname: 'โจ' });
+  assert.equal(name, 'เสีEวค่ะXลวงMา/Blacksmith (โจ)');
   assert.ok(name.length <= NICKNAME_MAX);
 });
 

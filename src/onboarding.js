@@ -73,7 +73,7 @@ async function setStage(member, { add, remove = [], reason }) {
 /** IGN/อาชีพ(ชื่อเล่น) ตัดให้พอดี 32 ตัวอักษร โดยตัดชื่อเล่นก่อน แล้วค่อยตัดอาชีพ */
 export function formatNickname({ ign, job, nickname }) {
   const candidates = [
-    `${ign}/${job}${nickname ? `(${nickname})` : ''}`,
+    `${ign}/${job}${nickname ? ` (${nickname})` : ''}`,
     `${ign}/${job}`,
     `${ign}`,
   ];
@@ -244,24 +244,52 @@ export async function selectJob(i) {
   });
 }
 
-/** โพสต์การ์ดแนะนำตัวผ่าน webhook ให้ขึ้นชื่อและรูปของเจ้าตัว (แก้ของเดิมถ้าเคยโพสต์แล้ว) */
+/**
+ * ส่งข้อความในชื่อและรูปของสมาชิก (ผ่าน webhook) ใช้ได้ทั้งห้องปกติและกระทู้ใน forum
+ * webhook สร้างในกระทู้ไม่ได้ ต้องสร้างที่ห้องแม่แล้วระบุ threadId
+ */
+export async function postAsMember(channel, member, content) {
+  const hook = await introHook(channel.isThread() ? channel.parent : channel);
+  return hook.send({
+    content,
+    username: member.displayName,
+    avatarURL: member.displayAvatarURL(),
+    allowedMentions: { parse: [] },
+    ...(channel.isThread() ? { threadId: channel.id } : {}),
+  });
+}
+
+async function introHook(channel) {
+  const hooks = await channel.fetchWebhooks();
+  return hooks.find((h) => h.name === 'Clover Intro') ?? channel.createWebhook({ name: 'Clover Intro' });
+}
+
+const introCardText = (member, data) =>
+  `IGN: ${data.ign}\nชื่อเล่น: ${data.nickname ?? '-'}\nอาชีพ: ${data.job}\n-# ${member}`;
+
+async function findIntroCard(channel, hook, memberId) {
+  const messages = await channel.messages.fetch({ limit: 100 });
+  return messages.find((m) => m.webhookId === hook.id && m.content.includes(`<@${memberId}>`));
+}
+
+/** แนะนำตัว (หรือแนะนำตัวใหม่): ลบการ์ดเดิมแล้วโพสต์ใหม่ล่างสุด ให้คนในห้องเห็นทุกครั้ง */
 async function postIntroCard(guild, member, data) {
   const channel = findChannel(guild, CHANNELS.intro);
   if (!channel) return;
-  const content = `IGN: ${data.ign}\nชื่อเล่น: ${data.nickname}\nอาชีพ: ${data.job}\n-# ${member}`;
-  const hooks = await channel.fetchWebhooks();
-  const hook =
-    hooks.find((h) => h.name === 'Clover Intro') ?? (await channel.createWebhook({ name: 'Clover Intro' }));
-  const messages = await channel.messages.fetch({ limit: 100 });
-  const old = messages.find((m) => m.webhookId === hook.id && m.content.includes(`<@${member.id}>`));
-  const payload = { content, allowedMentions: { parse: [] } };
-  if (old) await hook.editMessage(old.id, payload);
-  else
-    await hook.send({
-      ...payload,
-      username: member.displayName,
-      avatarURL: member.displayAvatarURL(),
-    });
+  const hook = await introHook(channel);
+  const old = await findIntroCard(channel, hook, member.id);
+  if (old) await hook.deleteMessage(old.id).catch(() => {});
+  await postAsMember(channel, member, introCardText(member, data));
+}
+
+/** เปลี่ยนชื่อ/อาชีพทีหลัง: แก้การ์ดเดิมให้ตรงกับข้อมูลใหม่ (ไม่มีการ์ดก็ไม่ต้องสร้าง) */
+export async function updateIntroCard(guild, member, data) {
+  const channel = findChannel(guild, CHANNELS.intro);
+  if (!channel) return;
+  const hook = await introHook(channel);
+  const old = await findIntroCard(channel, hook, member.id);
+  if (old)
+    await hook.editMessage(old.id, { content: introCardText(member, data), allowedMentions: { parse: [] } });
 }
 
 // การหาโพสต์ต้องโหลด thread ทั้ง active และ archived ซึ่งช้าเกินกว่าที่จะทำระหว่างตอบ interaction

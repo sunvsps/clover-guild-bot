@@ -71,6 +71,26 @@ export const auctionRulesPanel = () => ({
   components: [row(button('rules-auction', 'ยอมรับกฎการประมูล', ButtonStyle.Success))],
 });
 
+export const changeJobPanel = () => ({
+  embeds: [
+    new EmbedBuilder()
+      .setColor(COLOR)
+      .setTitle('🔄 เปลี่ยนอาชีพในเกม')
+      .setDescription('กดปุ่มด้านล่าง แล้วเลือกอาชีพใหม่จาก dropdown'),
+  ],
+  components: [row(button('change-job-btn', 'เปลี่ยนอาชีพ'))],
+});
+
+export const changeNamePanel = () => ({
+  embeds: [
+    new EmbedBuilder()
+      .setColor(COLOR)
+      .setTitle('✏️ เปลี่ยนชื่อในเกม')
+      .setDescription('กดปุ่มด้านล่าง แล้วกรอกชื่อตัวละครใหม่'),
+  ],
+  components: [row(button('change-name-btn', 'เปลี่ยนชื่อ'))],
+});
+
 /**
  * วางป้ายไว้ล่างสุดของห้อง โดยลบป้ายเดิมของบอทออกก่อน (ดูจาก customId ของปุ่ม)
  * คืนค่าจำนวนข้อความที่ลบไป
@@ -144,10 +164,10 @@ async function movePanelToBottomNow(channel, customId, payload, opts = {}) {
  * ห้ามตั้ง default ไว้: Discord ยิง event เฉพาะตอนค่า "เปลี่ยน" ถ้าคนเลือกค่าเดิมที่ถูกติ๊กไว้อยู่แล้ว
  * จะไม่มีอะไรเกิดขึ้น เขาจะติดอยู่ตรงนั้นจนต้องเลือกอาชีพอื่นก่อนแล้วค่อยเริ่มใหม่
  */
-export function jobSelectRow(jobs) {
+export function jobSelectRow(jobs, customId = 'intro-job') {
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
-      .setCustomId('intro-job')
+      .setCustomId(customId)
       .setPlaceholder('เลือกอาชีพของตัวละคร')
       .addOptions(jobs.slice(0, 25).map((j) => ({ label: j.label, value: String(j.id) }))),
   );
